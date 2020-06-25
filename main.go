@@ -134,8 +134,11 @@ func format(d time.Duration) string {
 	d -= m * time.Minute
 	s := d / time.Second
 
-	if h < 1 {
-		return fmt.Sprintf("%02d:%02d", m, s)
+	if m < 1 {
+		return fmt.Sprintf("%d", s)
 	}
-	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+	if h < 1 {
+		return fmt.Sprintf("%d:%02d", m, s)
+	}
+	return fmt.Sprintf("%d:%02d:%02d", h, m, s)
 }
