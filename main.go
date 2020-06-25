@@ -21,58 +21,25 @@ var (
 	timer          *time.Timer
 	ticker         *time.Ticker
 	queues         chan termbox.Event
-	startDone      bool
+	paused         bool
 	startX, startY int
 )
 
-func draw(d time.Duration) {
-	w, h := termbox.Size()
-	clear()
-
-	str := format(d)
-	text := toText(str)
-
-	if !startDone {
-		startDone = true
-		startX, startY = w/2-text.width()/2, h/2-text.height()/2
-	}
-
-	x, y := startX, startY
-	for _, s := range text {
-		echo(s, x, y)
-		x += s.width()
-	}
-
-	flush()
-}
-
-func format(d time.Duration) string {
-	d = d.Round(time.Second)
-	h := d / time.Hour
-	d -= h * time.Hour
-	m := d / time.Minute
-	d -= m * time.Minute
-	s := d / time.Second
-
-	if h < 1 {
-		return fmt.Sprintf("%02d:%02d", m, s)
-	}
-	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
-}
-
 func start(d time.Duration) {
+	paused = false
 	timer = time.NewTimer(d)
 	ticker = time.NewTicker(tick)
 }
 
 func stop() {
+	paused = true
 	timer.Stop()
 	ticker.Stop()
 }
 
 func countdown(left time.Duration) {
 	var exitCode int
-
+	startedWith := left
 	start(left)
 
 loop:
@@ -83,18 +50,25 @@ loop:
 				exitCode = 1
 				break loop
 			}
-			if ev.Ch == 'p' || ev.Ch == 'P' {
-				stop()
+			if ev.Ch == 'r' {
+				left = startedWith
+				start(startedWith)
 			}
-			if ev.Ch == 'c' || ev.Ch == 'C' {
-				start(left)
+			if ev.Ch == 'p' {
+				if !paused {
+					stop()
+				} else {
+					start(left)
+				}
 			}
+
 		case <-ticker.C:
 			left -= time.Duration(tick)
 			draw(left)
 		case <-timer.C:
-			break loop
+			stop()
 		}
+
 	}
 
 	termbox.Close()
@@ -130,4 +104,38 @@ func main() {
 
 	draw(left)
 	countdown(left)
+}
+
+func draw(d time.Duration) {
+	w, h := termbox.Size()
+	clear()
+
+	str := format(d)
+	text := toText(str)
+	startX, startY = w/2-text.width()/2, h/2-text.height()/2
+	x, y := startX, startY
+	for _, s := range text {
+		if d > 0 {
+			echo(s, x, y, termbox.ColorDefault)
+		} else {
+			echo(s, x, y, termbox.ColorRed)
+		}
+		x += s.width()
+	}
+
+	flush()
+}
+
+func format(d time.Duration) string {
+	d = d.Round(time.Second)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	d -= m * time.Minute
+	s := d / time.Second
+
+	if h < 1 {
+		return fmt.Sprintf("%02d:%02d", m, s)
+	}
+	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
