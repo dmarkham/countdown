@@ -40,6 +40,7 @@ func stop() {
 func countdown(left time.Duration) {
 	var exitCode int
 	startedWith := left
+	draw(left)
 	start(left)
 
 loop:
@@ -53,6 +54,7 @@ loop:
 			if ev.Ch == 'r' {
 				left = startedWith
 				start(startedWith)
+				draw(left)
 			}
 			if ev.Ch == 'p' {
 				if !paused {
@@ -63,10 +65,11 @@ loop:
 			}
 
 		case <-ticker.C:
-			left -= time.Duration(tick)
+			left -= tick
 			draw(left)
 		case <-timer.C:
 			stop()
+			draw(left)
 		}
 
 	}
@@ -134,11 +137,8 @@ func format(d time.Duration) string {
 	d -= m * time.Minute
 	s := d / time.Second
 
-	if m < 1 {
-		return fmt.Sprintf("%d", s)
-	}
 	if h < 1 {
-		return fmt.Sprintf("%d:%02d", m, s)
+		return fmt.Sprintf("%02d:%02d", m, s)
 	}
 	return fmt.Sprintf("%d:%02d:%02d", h, m, s)
 }
